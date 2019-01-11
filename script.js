@@ -68,6 +68,28 @@ var BudgetController = (function() {
 			return newItem;
 		},
 
+		deleteItem: function(type, id) { // type will be either exp/inc to tell which array the item belongs to 
+
+			var ids, index;
+
+			// let's say id = 6
+			// then we want, ids = [1 2 3 4 6 8]
+			// index = 3
+			// data.allItems[type][id]: this won't work as all id's are not in order always
+
+			// loop over all elements in inc or exp array and return new array with current ID's, using map 
+			ids = data.allItems[type].map(function(current) {
+				return current.id;
+			});
+
+			index = ids.indexOf(id);
+
+			if(index !== -1) { // splice method takes first argument as index from which deletion begins and second argument is no. of items to be deleted
+				data.allItems[type].splice(index, 1);
+			}
+
+		},
+
 		// calculates overall budget
 		calculateBudget: function() {
 			// calculate total income and expenses
@@ -343,9 +365,10 @@ var Controller = (function(budgetCtrl, UICtrl) {
 			//inc-1
 			splitID = itemID.split('-');
 			type = splitID[0];
-			ID = splitID[1];
+			ID = parseInt(splitID[1]);
 
 			// 1. delete the item from the DS
+			budgetCtrl.deleteItem(type, ID);
 
 
 			// 2. delete item from UI
