@@ -210,8 +210,40 @@ var UIController = (function() {
 		expenseLabel: '.budget__expenses--value',
 		percentageLabel: '.budget__expenses--percentage',
 		container: '.container',
-		expensesPercLabel: '.item__percentage'
+		expensesPercLabel: '.item__percentage',
+		dateLabel: '.budget__title--month'
 	}
+
+	var formatNumber = function(num, type) { // format numbers for better UX
+			num = Math.abs(num);
+			num = num.toFixed(2);
+
+			var numSplit = num.split('.');
+
+			int = numSplit[0];
+			dec = numSplit[1];
+
+			// Another Number formatter
+			var counter = 1;
+			var new_num = '';
+			 
+			for (var i = int.length -1; i > -1; i-- ){
+			  new_num = int[i].concat(new_num);
+			  if (counter % 3 === 0 && i !== 0) {
+			    new_num = ','.concat(new_num);
+			  }
+			  counter++;
+			}
+			
+			return (type === 'exp' ? '-' : '+') + ' ' + new_num + '.' + dec;
+		};
+
+	// making our own forEach fn for Node List! ------------only the fns in this module can use it, as it's a private fn/method-------------------------------------------------------
+	var nodeListForEach = function(list, callback) {
+		for (var i = list.length - 1; i >= 0; i--) {
+			callback(list[i], i);
+		}
+	};
 
 	return {
 		getInput: function() {
@@ -240,7 +272,7 @@ var UIController = (function() {
 			// Replace the placeholder text with actual input data
 			newHtml = html.replace('%id%', obj.id);
 			newHtml = newHtml.replace('%description%', obj.description);
-			newHtml = newHtml.replace('%value%', obj.value);
+			newHtml = newHtml.replace('%value%', formatNumber(obj.value, type));
 
 
 			// Insert HTML into the DOM (DOM API)
@@ -267,10 +299,12 @@ var UIController = (function() {
 			fieldsArray[0].focus(); // bring focus back on description
 		},
 
-		displayBudget: function(obj) {
-			document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget;
-			document.querySelector(DOMstrings.incomeLabel).textContent = obj.totalInc;
-			document.querySelector(DOMstrings.expenseLabel).textContent = obj.totalExp;
+		displayBudget: function(obj) { // display of top part of page : global/overall budget
+			var type;
+			obj.budget >= 0 ? type = 'inc' : type = 'exp';		
+			document.querySelector(DOMstrings.budgetLabel).textContent = formatNumber(obj.budget, type);
+			document.querySelector(DOMstrings.incomeLabel).textContent = formatNumber(obj.totalInc, 'inc');
+			document.querySelector(DOMstrings.expenseLabel).textContent = formatNumber(obj.totalExp, 'exp');
 
 			if(obj.percentage > 0) {
 				document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage + '%';
@@ -279,15 +313,8 @@ var UIController = (function() {
 			}
 		},
 
-		displayPercentages: function(percentages) {
+		displayPercentages: function(percentages) { // display % labels of expenses
 			var fields = document.querySelectorAll(DOMstrings.expensesPercLabel); // Node list is returned by querySelectorAll
-
-			// making our own forEach fn for Node List! ----------------------------------------------------------------------
-			var nodeListForEach = function(list, callback) {
-				for (var i = list.length - 1; i >= 0; i--) {
-					callback(list[i], i);
-				}
-			};
 
 			nodeListForEach(fields, function(current, index) {
 				if(percentages[index] > 0) {
@@ -296,6 +323,28 @@ var UIController = (function() {
 					current.textContent = '---';
 				}
 			});
+		},
+
+		displayMonth: function() { 
+			var now, year, month, months;
+			now = new Date(); // today's date from Date object (year, month, day)
+			year = now.getFullYear();
+			months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+			month = now.getMonth();
+			document.querySelector(DOMstrings.dateLabel).textContent = months[month] + ' ' + year;
+		},
+
+		changedType: function() { // fields is again a Node List, we traverse over it using our own method we made
+			var fields = document.querySelectorAll(
+				DOMstrings.inputType + ',' +
+				DOMstrings.inputDescription + ',' +
+				DOMstrings.inputValue);
+
+			nodeListForEach(fields, function(current) {
+				current.classList.toggle('red-focus');
+			});
+
+			document.querySelector(DOMstrings.inputBtn).classList.toggle('red');
 		},
 
 		getDOMstrings: function() { // an object containing all DOM strings/CSS classes is returned in public scope 
@@ -369,6 +418,8 @@ var Controller = (function(budgetCtrl, UICtrl) {
 		});
 
 		document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem); // using event bubbling here (reason: we have loads of childs & these are not present initially)
+
+		document.querySelector(DOM.inputType).addEventListener('change', UICtrl.changedType);
 	};
 
 	// step no 5. of ctrAddItem method
@@ -454,6 +505,7 @@ var Controller = (function(budgetCtrl, UICtrl) {
 	return { // a public fn which will be called outside our controllers to start the app. 
 		init: function() {
 			console.log('Application has started.');
+			UICtrl.displayMonth();
 			UICtrl.displayBudget({
 				budget: 0,
 				totalInc: 0,
